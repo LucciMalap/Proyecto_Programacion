@@ -196,7 +196,24 @@ class EstadisticasWindow(QWidget):
             self.funciones_label.setText(contador)
 
     def mostrar_matriz(self):
-        print('Mostrar matriz')
+        # Crear la matriz 3x3
+        matriz = [
+            [4, 9, 2],
+            [1, 0, 0],
+            [3, 5, 7]
+        ]
+
+        # Convertir la matriz a un formato de texto para mostrar en QLabel
+        matriz_texto = "\n".join(["\t".join(map(str, fila)) for fila in matriz])
+
+        # Crear un QLabel para mostrar la matriz
+        self.funciones_label.setText(matriz_texto)
+
+        # Ajustar el tamaño del QLabel al contenido
+        self.funciones_label.setAlignment(Qt.AlignCenter)
+
+        # Configurar el QLabel en el centro de la ventana
+        self.setCentralWidget(self.funciones_label)
 
     def mostrar_la_mejor_semana(self):
         print('Mostrar la mejor semana')
