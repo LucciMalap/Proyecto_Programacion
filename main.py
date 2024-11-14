@@ -186,10 +186,14 @@ class EstadisticasWindow(QWidget):
         ultima_linea = None
         while self.arduino.in_waiting > 0:
           ultima_linea = self.arduino.readline().decode('utf-8').strip()
+          contador = ultima_linea
 
         if ultima_linea:
             print(f'Datos recibidos del Arduino {ultima_linea}')
-        self.funciones_label.setText(ultima_linea)
+            self.funciones_label.setText(ultima_linea)
+        else:
+            print(f'Datos recibidos del Arduino {contador}')
+            self.funciones_label.setText(contador)
 
     def mostrar_matriz(self):
         print('Mostrar matriz')
@@ -243,7 +247,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(central_widget)
 
         try:
-            self.arduino = serial.Serial('COM7', 9600)      #Establece el puerto del Arduino
+            self.arduino = serial.Serial('COM5', 9600)      #Establece el puerto del Arduino
             print('Conexión establecida con el Arduino.')
         except serial.SerialException as e:
             print(f'No se pudo conectar al Arduino {e}')
