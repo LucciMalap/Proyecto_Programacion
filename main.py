@@ -13,59 +13,55 @@ class FuncionesWindow(QWidget):
         self.sistema_encendido = False
         self.toggle = True
 
+        # Configurar el diseño principal
         main_layout = QVBoxLayout()
-        main_layout.setContentsMargins(0, 0, 0, 10)
+        main_layout.setContentsMargins(10, 10, 10, 10)
         main_layout.setSpacing(10)
 
-        spacer = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
-        main_layout.addItem(spacer)
+        # Espaciador superior para empujar elementos hacia abajo
+        main_layout.addItem(QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding))
 
-        button_layout = QHBoxLayout()
-        button_layout.setContentsMargins(0, 0, 0, 0)
-        button_layout.setSpacing(10)
-        
+        # Slider para regular brillo
         self.horizontalSlider = QSlider(Qt.Horizontal)
-        self.horizontalSlider.setRange(0,255)
+        self.horizontalSlider.setRange(0, 255)
         self.horizontalSlider.setValue(255)
         self.horizontalSlider.setTickInterval(1)
         self.horizontalSlider.setTickPosition(QSlider.TicksBelow)
         self.horizontalSlider.valueChanged.connect(self.regular_brillo)
-        
-        self.pushButton_4 = QPushButton('Encender Sistema')
-        self.pushButton_4.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self.pushButton_4.setFixedHeight(50)
-        self.pushButton_4.clicked.connect(self.enviar_senal_b)
-
-        self.pushButton_5 = QPushButton('Apagar Sistema')
-        self.pushButton_5.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self.pushButton_5.setFixedHeight(50)
-        self.pushButton_5.clicked.connect(self.enviar_senal_a)
-
-        button_layout.addWidget(self.pushButton_4)
-        button_layout.addWidget(self.pushButton_5)
-
         main_layout.addWidget(self.horizontalSlider)
-        main_layout.addLayout(button_layout)
 
-        self.boton_volver = QPushButton('Volver a Principal')
-        self.boton_volver.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self.boton_volver.setFixedHeight(50)
-        self.boton_volver.clicked.connect(self.volver_a_principal)
+        # Diseño horizontal para botones de encendido y apagado
+        power_buttons_layout = QHBoxLayout()
+        self.pushButton_4 = self.crear_boton('Encender Sistema', self.enviar_senal_b)
+        self.pushButton_5 = self.crear_boton('Apagar Sistema', self.enviar_senal_a)
+        power_buttons_layout.addWidget(self.pushButton_4)
+        power_buttons_layout.addWidget(self.pushButton_5)
+        main_layout.addLayout(power_buttons_layout)
 
+        # Botón para volver al menú principal
+        self.boton_volver = self.crear_boton('Volver a Principal', self.volver_a_principal)
         main_layout.addWidget(self.boton_volver)
 
         self.setLayout(main_layout)
-        
-        self.timer = QTimer(self)
-        #self.timer.timeout.connect(self.leer_datos_arduino)
-        self.timer.start(1000) 
 
-        
+        # Timer para leer datos del Arduino
+        self.timer = QTimer(self)
+        # self.timer.timeout.connect(self.leer_datos_arduino)
+        self.timer.start(1000)
+
+    def crear_boton(self, texto, callback):
+        """Crea un botón estándar."""
+        boton = QPushButton(texto)
+        boton.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        boton.setFixedHeight(50)
+        boton.clicked.connect(callback)
+        return boton
+
     def leer_datos_arduino(self):
+        """Lee datos del Arduino."""
         if self.arduino.in_waiting > 0:
             datos = self.arduino.readline().decode('utf-8').strip()
-            print(f'Datos recibidos del Arduino {datos}')
-
+            print(f'Datos recibidos del Arduino: {datos}')
             if datos == 'Sistema encendido':
                 self.sistema_encendido = True
                 self.toggle = True
@@ -74,19 +70,23 @@ class FuncionesWindow(QWidget):
                 self.toggle = False
 
     def enviar_senal_a(self):
+        """Envía señal 'A' al Arduino."""
         self.arduino.write(b'A')
         self.toggle = False
-        
+
     def enviar_senal_b(self):
+        """Envía señal 'B' al Arduino."""
         self.arduino.write(b'B')
         self.toggle = True
-    
+
     def regular_brillo(self):
+        """Regula el brillo según el slider."""
         brillo = self.horizontalSlider.value()
-        self.arduino.write(f'{brillo}'.encode)
-        print(brillo)
-        
+        self.arduino.write(f'{brillo}'.encode())
+        print(f'Brillo ajustado a: {brillo}')
+
     def volver_a_principal(self):
+        """Vuelve al menú principal."""
         self.hide()
         self.main_window.show()
 
@@ -96,124 +96,97 @@ class EstadisticasWindow(QWidget):
         self.setWindowTitle('Estadísticas')
         self.arduino = arduino
         self.main_window = main_window
-        self.toggle = 0
+        self.toggle = False
 
+        self.setup_ui()
+
+    def setup_ui(self):
+        """Configura la interfaz de usuario."""
         main_layout = QVBoxLayout(self)
-        
-        self.menu_button = QPushButton('Menú')
-        self.menu_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self.menu_button.setFixedHeight(40)
-        self.menu_button.clicked.connect(self.toggle_sidebar)
-        
-        self.volver_button = QPushButton('Volver')
-        self.volver_button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self.volver_button.setFixedHeight(40)
-        self.volver_button.clicked.connect(self.volver_a_principal)
+
+        # Botones principales
+        self.menu_button = self.crear_boton('Menú', self.toggle_sidebar)
+        self.volver_button = self.crear_boton('Volver', self.volver_a_principal)
 
         main_layout.addWidget(self.menu_button)
-        
-        self.spacer = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
-        main_layout.addItem(self.spacer)
 
+        # Widgets secundarios (menu lateral y área de funciones)
+        self.setup_sidebar()
+        self.setup_funciones_widget()
+
+        # Contenedor horizontal para el contenido principal
         self.horizontal_layout = QHBoxLayout()
+        self.horizontal_layout.addWidget(self.menu_widget)
+        self.horizontal_layout.addWidget(self.funciones_widget)
 
+        main_layout.addLayout(self.horizontal_layout)
+        main_layout.addWidget(self.volver_button)
+
+    def setup_sidebar(self):
+        """Configura el menú lateral."""
         self.menu_widget = QWidget()
         self.menu_widget.setFixedWidth(200)
         self.menu_layout = QVBoxLayout(self.menu_widget)
 
-        self.contador_button = QPushButton('Contador')
-        self.contador_button.clicked.connect(self.mostrar_contador)
-        
-        self.matriz_button = QPushButton('Matriz')
-        self.matriz_button.clicked.connect(self.mostrar_matriz)
-        
-        self.la_mejor_semana_button = QPushButton('La Mejor Semana')
-        self.la_mejor_semana_button.clicked.connect(self.mostrar_la_mejor_semana)
-        
-        self.la_peor_semana_button = QPushButton('La Peor Semana')
-        self.la_peor_semana_button.clicked.connect(self.mostrar_la_peor_semana)
-        
-        self.promedio_mensual_button = QPushButton('Promedio Mensual')
-        self.promedio_mensual_button.clicked.connect(self.mostrar_promedio_mensual)
-        
-        self.promedio_diario_button = QPushButton('Promedio Diario')
-        self.promedio_diario_button.clicked.connect(self.mostrar_promedio_diario)
+        botones = [
+            ('Contador', self.mostrar_contador),
+            ('Matriz', self.mostrar_matriz),
+            ('La Mejor Semana', self.mostrar_la_mejor_semana),
+            ('La Peor Semana', self.mostrar_la_peor_semana),
+            ('Promedio Mensual', self.mostrar_promedio_mensual),
+            ('Promedio Diario', self.mostrar_promedio_diario),
+        ]
 
-        # Definir una altura fija y expandir para ocupar el ancho completo
-        for button in [self.contador_button, self.matriz_button, self.la_mejor_semana_button, 
-                       self.la_peor_semana_button, self.promedio_mensual_button, self.promedio_diario_button]:
-            button.setFixedHeight(50)
-            button.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-
-            self.menu_layout.addWidget(button)
+        for texto, callback in botones:
+            boton = self.crear_boton(texto, callback, height=50)
+            self.menu_layout.addWidget(boton)
 
         self.menu_widget.setVisible(False)
-        
-        self.horizontal_layout.addWidget(self.menu_widget)
-        
+
+    def setup_funciones_widget(self):
+        """Configura el widget de funciones principal."""
         self.funciones_widget = QWidget()
         self.funciones_widget.setFixedWidth(200)
         self.funciones_layout = QVBoxLayout(self.funciones_widget)
-        
-        self.funciones_label = QLabel('Contenido Adicional')
-        self.funciones_layout.addWidget(self.funciones_label)
-        
-        self.horizontal_layout.addWidget(self.funciones_widget)
-        
-        main_layout.addLayout(self.horizontal_layout)
 
-        
+        self.funciones_label = QLabel('Ms Farma', alignment=Qt.AlignCenter)
+        self.funciones_layout.addWidget(self.funciones_label)
+
         self.funciones_widget.setVisible(False)
-        
-        main_layout.addWidget(self.volver_button)
+
+    def crear_boton(self, texto, callback, height=40):
+        """Crea un botón estándar."""
+        boton = QPushButton(texto)
+        boton.setFixedHeight(height)
+        boton.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        boton.clicked.connect(callback)
+        return boton
 
     def toggle_sidebar(self):
-        current_visible = self.menu_widget.isVisible()
-        self.menu_widget.setVisible(not current_visible)
-        current_visible2 = self.funciones_widget.isVisible()
-        self.funciones_widget.setVisible(not current_visible2)
-        layout = self.layout()
-        self.toggle = 1
-        if self.toggle == 1:
-            layout.removeItem(self.spacer)
-        elif self.toggle == 2:
-            layout.removeItem(self.volver_button)
-            layout.addItem(self.spacer)
-            layout.addItem(self.volver_button)
-            self.toggle = 0
+        """Alterna la visibilidad de los widgets laterales."""
+        self.menu_widget.setVisible(not self.menu_widget.isVisible())
+        self.funciones_widget.setVisible(not self.funciones_widget.isVisible())
 
     def mostrar_contador(self):
-        ultima_linea = None
-        while self.arduino.in_waiting > 0:
-          ultima_linea = self.arduino.readline().decode('utf-8').strip()
-          contador = ultima_linea
+        """Muestra el último dato leído del Arduino."""
+        contador = None
+        if self.arduino:
+            while self.arduino.in_waiting > 0:
+                contador = self.arduino.readline().decode('utf-8').strip()
 
-        if ultima_linea:
-            print(f'Datos recibidos del Arduino {ultima_linea}')
-            self.funciones_label.setText(ultima_linea)
-        else:
-            print(f'Datos recibidos del Arduino {contador}')
-            self.funciones_label.setText(contador)
+        texto = contador if contador else 'No hay datos disponibles'
+        print(f'Datos recibidos del Arduino: {texto}')
+        self.funciones_label.setText(texto)
 
     def mostrar_matriz(self):
-        # Crear la matriz 3x3
+        """Muestra una matriz de ejemplo."""
         matriz = [
             [4, 9, 2],
-            [1, 0, 0],
-            [3, 5, 7]
+            [3, 5, 7],
+            [8, 1, 6],
         ]
-
-        # Convertir la matriz a un formato de texto para mostrar en QLabel
-        matriz_texto = "\n".join(["\t".join(map(str, fila)) for fila in matriz])
-
-        # Crear un QLabel para mostrar la matriz
-        self.funciones_label.setText(matriz_texto)
-
-        # Ajustar el tamaño del QLabel al contenido
-        self.funciones_label.setAlignment(Qt.AlignCenter)
-
-        # Configurar el QLabel en el centro de la ventana
-        self.setCentralWidget(self.funciones_label)
+        texto_matriz = "\n".join(["\t".join(map(str, fila)) for fila in matriz])
+        self.funciones_label.setText(texto_matriz)
 
     def mostrar_la_mejor_semana(self):
         print('Mostrar la mejor semana')
@@ -231,54 +204,69 @@ class EstadisticasWindow(QWidget):
         self.hide()
         self.main_window.show()
 
-
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.ui = Ui_MainWindow()
-        self.ui.setupUi(self)
+        self.setWindowTitle("Proyecto Final")
+        self.arduino = self.configurar_arduino()
 
-        layout_botones = QVBoxLayout()
-
-        spacer = QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding)
-        layout_botones.addItem(spacer)
-
-        self.pushButton_2 = QPushButton('Estadisticas')
-        self.pushButton_2.setFixedHeight(75)
-        self.pushButton_2.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self.pushButton_2.clicked.connect(self.informacion)
-        
-        self.pushButton_3 = QPushButton('Inicio')
-        self.pushButton_3.setFixedHeight(75)
-        self.pushButton_3.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self.pushButton_3.clicked.connect(self.inicio)
-
-        button_layout = QHBoxLayout()
-        button_layout.addWidget(self.pushButton_2)
-        button_layout.addWidget(self.pushButton_3)
-
-        layout_botones.addLayout(button_layout)
-
-        central_widget = QWidget()
-        central_widget.setLayout(layout_botones)
-        self.setCentralWidget(central_widget)
-
-        try:
-            self.arduino = serial.Serial('COM5', 9600)      #Establece el puerto del Arduino
-            print('Conexión establecida con el Arduino.')
-        except serial.SerialException as e:
-            print(f'No se pudo conectar al Arduino {e}')
-            self.arduino = None
-
+        # Ventanas secundarias
         self.funciones_window = FuncionesWindow(self.arduino, self)
         self.estadisticas_window = EstadisticasWindow(self.arduino, self)
 
-    @Slot()
-    def inicio(self):
+        # Configuración de la interfaz principal
+        self.setup_ui()
+
+    def setup_ui(self):
+        """Configura la interfaz de usuario principal."""
+        layout_principal = QVBoxLayout()
+
+        # Espaciador
+        layout_principal.addItem(QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding))
+
+        # Botones principales
+        layout_botones = QHBoxLayout()
+        botones = [
+            ('Estadísticas', self.mostrar_estadisticas),
+            ('Inicio', self.mostrar_funciones),
+        ]
+
+        for texto, callback in botones:
+            boton = self.crear_boton(texto, callback, height=75)
+            layout_botones.addWidget(boton)
+
+        layout_principal.addLayout(layout_botones)
+
+        # Configurar como widget central
+        central_widget = QWidget()
+        central_widget.setLayout(layout_principal)
+        self.setCentralWidget(central_widget)
+
+    def configurar_arduino(self):
+        """Intenta configurar la conexión con el Arduino."""
+        try:
+            arduino = serial.Serial('COM5', 9600)
+            print('Conexión establecida con el Arduino.')
+            return arduino
+        except serial.SerialException as e:
+            print(f'Error al conectar con el Arduino: {e}')
+            return None
+
+    def crear_boton(self, texto, callback, height=40):
+        """Crea un botón estándar."""
+        boton = QPushButton(texto)
+        boton.setFixedHeight(height)
+        boton.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        boton.clicked.connect(callback)
+        return boton
+
+    def mostrar_funciones(self):
+        """Abre la ventana de Funciones."""
         self.funciones_window.showMaximized()
         self.hide()
 
-    def informacion(self):
+    def mostrar_estadisticas(self):
+        """Abre la ventana de Estadísticas."""
         self.estadisticas_window.showMaximized()
         self.hide()
 
