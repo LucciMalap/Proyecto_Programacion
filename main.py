@@ -2,6 +2,8 @@ import sys
 from PySide2.QtWidgets import *
 from PySide2.QtCore import Slot, QTimer, Qt
 import serial
+import math
+import datetime
 from ui_Proyecto_final import Ui_MainWindow
 
 class FuncionesWindow(QWidget):
@@ -44,11 +46,6 @@ class FuncionesWindow(QWidget):
 
         self.setLayout(main_layout)
 
-        # Timer para leer datos del Arduino
-        self.timer = QTimer(self)
-        # self.timer.timeout.connect(self.leer_datos_arduino)
-        self.timer.start(1000)
-
     def crear_boton(self, texto, callback):
         """Crea un botón estándar."""
         boton = QPushButton(texto)
@@ -62,12 +59,6 @@ class FuncionesWindow(QWidget):
         if self.arduino.in_waiting > 0:
             datos = self.arduino.readline().decode('utf-8').strip()
             print(f'Datos recibidos del Arduino: {datos}')
-            if datos == 'Sistema encendido':
-                self.sistema_encendido = True
-                self.toggle = True
-            elif datos == 'Sistema apagado':
-                self.sistema_encendido = False
-                self.toggle = False
 
     def enviar_senal_a(self):
         """Envía señal 'A' al Arduino."""
@@ -89,14 +80,29 @@ class FuncionesWindow(QWidget):
         """Vuelve al menú principal."""
         self.hide()
         self.main_window.show()
-
+        
 class EstadisticasWindow(QWidget):
     def __init__(self, arduino, main_window):
         super().__init__()
         self.setWindowTitle('Estadísticas')
         self.arduino = arduino
         self.main_window = main_window
-        self.toggle = False
+        self.contador_actual = 0
+                
+        # Inicializar la matriz
+        self.matriz = [[0] * 7 for _ in range(5)]
+
+        # Obtener el día actual
+        hoy = datetime.datetime.now()
+
+        # Calcular el día de la semana (0=lunes, 6=domingo)
+        self.dia_actual = hoy.weekday()
+
+        # Calcular la semana actual (1-5)
+        self.semana_actual = math.ceil(hoy.day / 7)
+
+        # Actualizar la matriz con el contador
+        self.matriz[self.semana_actual - 1][self.dia_actual] = self.contador_actual  # Restamos 1 para que empiece en índice 0
 
         self.setup_ui()
 
@@ -104,11 +110,11 @@ class EstadisticasWindow(QWidget):
         """Configura la interfaz de usuario."""
         main_layout = QVBoxLayout(self)
 
-        # Botones principales
-        self.menu_button = self.crear_boton('Menú', self.toggle_sidebar)
         self.volver_button = self.crear_boton('Volver', self.volver_a_principal)
-
-        main_layout.addWidget(self.menu_button)
+        self.menu_label = QLabel('Menu', alignment=Qt.AlignCenter)
+        self.menu_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.menu_label.setFixedHeight(20)
+        main_layout.addWidget(self.menu_label)
 
         # Widgets secundarios (menu lateral y área de funciones)
         self.setup_sidebar()
@@ -141,18 +147,16 @@ class EstadisticasWindow(QWidget):
             boton = self.crear_boton(texto, callback, height=50)
             self.menu_layout.addWidget(boton)
 
-        self.menu_widget.setVisible(False)
-
     def setup_funciones_widget(self):
         """Configura el widget de funciones principal."""
         self.funciones_widget = QWidget()
-        self.funciones_widget.setFixedWidth(200)
         self.funciones_layout = QVBoxLayout(self.funciones_widget)
 
         self.funciones_label = QLabel('Ms Farma', alignment=Qt.AlignCenter)
         self.funciones_layout.addWidget(self.funciones_label)
-
-        self.funciones_widget.setVisible(False)
+        
+        self.table = QTableWidget(5, 7)
+        self.table.setHorizontalHeaderLabels(['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'])
 
     def crear_boton(self, texto, callback, height=40):
         """Crea un botón estándar."""
@@ -162,43 +166,129 @@ class EstadisticasWindow(QWidget):
         boton.clicked.connect(callback)
         return boton
 
-    def toggle_sidebar(self):
-        """Alterna la visibilidad de los widgets laterales."""
-        self.menu_widget.setVisible(not self.menu_widget.isVisible())
-        self.funciones_widget.setVisible(not self.funciones_widget.isVisible())
-
     def mostrar_contador(self):
-        """Muestra el último dato leído del Arduino."""
+        """Muestra el último dato leído del Arduino en el layout."""
         contador = None
         if self.arduino:
             while self.arduino.in_waiting > 0:
                 contador = self.arduino.readline().decode('utf-8').strip()
-
-        texto = contador if contador else 'No hay datos disponibles'
-        print(f'Datos recibidos del Arduino: {texto}')
-        self.funciones_label.setText(texto)
+        
+        self.table.hide()
+        self.funciones_label.show()
+        
+        if contador:
+            self.contador_actual = contador
+        
+        
+        print(f'Datos recibidos del Arduino: {self.contador_actual}')
+        self.funciones_label.setText(f"Contador: {self.contador_actual}")
+        self.funciones_layout.addWidget(self.funciones_label)
 
     def mostrar_matriz(self):
-        """Muestra una matriz de ejemplo."""
-        matriz = [
-            [4, 9, 2],
-            [3, 5, 7],
-            [8, 1, 6],
-        ]
-        texto_matriz = "\n".join(["\t".join(map(str, fila)) for fila in matriz])
-        self.funciones_label.setText(texto_matriz)
+        """Muestra la matriz de contadores (calendario) en el layout."""
+        if self.arduino:
+            while self.arduino.in_waiting > 0:
+                self.contador_actual = self.arduino.readline().decode('utf-8').strip()
+                self.matriz[self.semana_actual][self.dia_actual] = int(self.contador_actual)
+        
+        self.actualizar_tabla()
+
+        # Asegurarse de que la tabla ocupe todo el espacio disponible
+        self.table.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)  # Expandir a todo el espacio disponible
+        self.table.setMinimumSize(800, 600)  # Puedes ajustar estos valores para darle el tamaño que desees
+
+        # Ajustar la tabla para que las celdas se expandan por igual
+        self.table.horizontalHeader().setStretchLastSection(False)  # Desactiva el estiramiento solo de la última columna
+        self.table.verticalHeader().setStretchLastSection(False)    # Desactiva el estiramiento solo de la última fila
+
+        self.table.setColumnCount(7)  # Aseguramos que tenga 7 columnas (uno por cada día)
+        self.table.setRowCount(5)     # Aseguramos que tenga 5 filas (uno por cada semana)
+
+        # Hacer que todas las celdas se estiren por igual
+        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)  # Ajusta todas las columnas
+        self.table.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)    # Ajusta todas las filas
+
+        # Agregar la tabla al layout
+        self.funciones_layout.addWidget(self.table)
+
+        self.funciones_label.hide()
+        self.table.show()
+
+    def actualizar_tabla(self):
+        """Actualiza los valores de la tabla con los datos de la matriz."""
+        for semana in range(5):
+            for dia in range(7):
+                # Crear un nuevo QTableWidgetItem para cada celda
+                item = QTableWidgetItem(str(self.matriz[semana][dia]))
+
+                # Centrar el texto en cada celda
+                item.setTextAlignment(Qt.AlignCenter)
+
+                # Hacer la celda de solo lectura (no editable)
+                item.setFlags(item.flags() & ~Qt.ItemIsEditable)
+
+                # Insertar el item en la tabla en la posición correspondiente
+                self.table.setItem(semana, dia, item)
+
+        # Ajustar las celdas de acuerdo al tamaño de la tabla
+        for col in range(7):  # 7 columnas (Lunes, Martes, etc.)
+            self.table.setColumnWidth(col, self.table.width() // 7)  # Divide el ancho total entre las 7 columnas
+
+        for row in range(5):  # 5 filas (semanas)
+            self.table.setRowHeight(row, self.table.height() // 5)  # Divide la altura total entre las 5 filas
 
     def mostrar_la_mejor_semana(self):
-        print('Mostrar la mejor semana')
+        """Encuentra la semana con la mayor suma de contadores y la devuelve."""
+        
+        if self.arduino:
+            while self.arduino.in_waiting > 0:
+                self.contador_actual = self.arduino.readline().decode('utf-8').strip()
+                self.matriz[self.semana_actual][self.dia_actual] = int(self.contador_actual)
+        
+        self.table.hide()
+        self.funciones_label.show()
+        
+        # Creamos una lista de tuplas (suma de la semana, índice de la semana)
+        semanas_con_suma = [(sum(self.matriz[fila]), fila) for fila in range(len(self.matriz))]
+        
+        # Ordenamos la lista de semanas por la suma en orden descendente
+        semanas_con_suma.sort(reverse=True, key=lambda x: x[0])
+
+        # La mejor semana es la que tiene la mayor suma
+        mejor_semana = semanas_con_suma[0][1]
+
+        self.funciones_label.setText(f"La mejor semana es la semana {mejor_semana + 1} con una suma total de contadores de {semanas_con_suma[0][0]}.")
 
     def mostrar_la_peor_semana(self):
-        print('Mostrar la peor semana')
+        """Encuentra la semana con la menor suma de contadores y la devuelve."""
+        
+        if self.arduino:
+            while self.arduino.in_waiting > 0:
+                self.contador_actual = self.arduino.readline().decode('utf-8').strip()
+                self.matriz[self.semana_actual][self.dia_actual] = int(self.contador_actual)
+        
+        self.table.hide()
+        self.funciones_label.show()
+        
+        # Creamos una lista de tuplas (suma de la semana, índice de la semana)
+        semanas_con_suma = [(sum(self.matriz[fila]), fila) for fila in range(len(self.matriz))]
+        
+        # Ordenamos la lista de semanas por la suma en orden ascendente (de menor a mayor)
+        semanas_con_suma.sort(key=lambda x: x[0])
+
+        # La peor semana es la que tiene la menor suma
+        peor_semana = semanas_con_suma[0][1]
+
+        self.funciones_label.setText(f"La peor semana es la semana {peor_semana + 1} con una suma total de contadores de {semanas_con_suma[0][0]}.")
 
     def mostrar_promedio_mensual(self):
         print('Mostrar promedio mensual')
 
     def mostrar_promedio_diario(self):
-        print('Mostrar promedio diario')
+        if self.arduino:
+            while self.arduino.in_waiting > 0:
+                self.contador_actual = self.arduino.readline().decode('utf-8').strip()
+                self.matriz[self.semana_actual][self.dia_actual] = int(self.contador_actual)
 
     def volver_a_principal(self):
         self.hide()
@@ -209,6 +299,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("Proyecto Final")
         self.arduino = self.configurar_arduino()
+        self.ui = Ui_MainWindow
 
         # Ventanas secundarias
         self.funciones_window = FuncionesWindow(self.arduino, self)
@@ -245,7 +336,7 @@ class MainWindow(QMainWindow):
     def configurar_arduino(self):
         """Intenta configurar la conexión con el Arduino."""
         try:
-            arduino = serial.Serial('COM5', 9600)
+            arduino = serial.Serial('COM7', 9600)
             print('Conexión establecida con el Arduino.')
             return arduino
         except serial.SerialException as e:

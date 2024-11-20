@@ -1,4 +1,4 @@
-semana1 = []
+"""semana1 = []
 semana2 = []
 semana3 = []
 semana4 = []
@@ -44,4 +44,31 @@ print("el tercer dia de la primera semana fue asi", M1[2][1])
 
 total_personas = sum(sum(semana) for semana in M1)
 
-print(f"El total de personas que entraron en el mes es: {total_personas}")
+print(f"El total de personas que entraron en el mes es: {total_personas}")"""
+import datetime
+import math
+import serial
+# Crear una matriz de 5 filas y 7 columnas, inicializada con ceros
+matriz = [[0] * 7 for _ in range(5)]
+
+# Mostrar la matriz
+for fila in matriz:
+    print(fila)
+
+dia_actual = datetime.datetime.now().weekday()  # 0 = Lunes, 6 = Domingo
+semana_actual = math.ceil(dia_actual / 7)
+
+arduino = serial.Serial('COM7', 9600)
+print('Conexión establecida con el Arduino.')
+while arduino:
+    while arduino.in_waiting > 0:
+        contador = arduino.readline().decode('utf-8').strip()
+        print(contador)
+        matriz[semana_actual][dia_actual] = int(contador)
+        
+        for fila in matriz:
+            print(fila)
+
+
+print(dia_actual)
+print(semana_actual)
