@@ -289,6 +289,25 @@ class EstadisticasWindow(QWidget):
             while self.arduino.in_waiting > 0:
                 self.contador_actual = self.arduino.readline().decode('utf-8').strip()
                 self.matriz[self.semana_actual][self.dia_actual] = int(self.contador_actual)
+        
+                
+        """Muestra la suma de los valores de la matriz para cada día de la semana (Lunes a Domingo)."""
+        sumas = []
+
+        for dia in range(7):  # 7 días de la semana (Lunes a Domingo)
+            total = 0
+            for semana in range(5):  # 5 semanas
+                total += self.matriz[semana][dia]
+            sumas.append(total)
+
+        # Mostrar los totales de cada día en el label
+        suma_texto = "Suma Diaria (Total personas por día):\n"
+        dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
+        for i, suma in enumerate(sumas):
+            suma_texto += f"{dias[i]}: {suma} personas\n"
+
+        self.funciones_label.setText(suma_texto)
+        self.funciones_layout.addWidget(self.funciones_label)
 
     def volver_a_principal(self):
         self.hide()
