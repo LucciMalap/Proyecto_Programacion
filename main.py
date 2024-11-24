@@ -5,6 +5,7 @@ import serial
 import math
 import datetime
 from ui_Proyecto_final import Ui_MainWindow
+import json
 
 class FuncionesWindow(QWidget):
     def __init__(self, arduino, main_window):
@@ -139,8 +140,8 @@ class EstadisticasWindow(QWidget):
             ('Matriz', self.mostrar_matriz),
             ('La Mejor Semana', self.mostrar_la_mejor_semana),
             ('La Peor Semana', self.mostrar_la_peor_semana),
-            ('Promedio Mensual', self.mostrar_promedio_mensual),
             ('Promedio Diario', self.mostrar_promedio_diario),
+            ('Descargar Mes', self.descargar_json)
         ]
 
         for texto, callback in botones:
@@ -281,33 +282,79 @@ class EstadisticasWindow(QWidget):
 
         self.funciones_label.setText(f"La peor semana es la semana {peor_semana + 1} con una suma total de contadores de {semanas_con_suma[0][0]}.")
 
-    def mostrar_promedio_mensual(self):
-        print('Mostrar promedio mensual')
-
     def mostrar_promedio_diario(self):
+        """Muestra el promedio de los valores de la matriz para cada día de la semana, ignorando los valores en 0."""
+        
         if self.arduino:
             while self.arduino.in_waiting > 0:
                 self.contador_actual = self.arduino.readline().decode('utf-8').strip()
                 self.matriz[self.semana_actual][self.dia_actual] = int(self.contador_actual)
-        
                 
-        """Muestra la suma de los valores de la matriz para cada día de la semana (Lunes a Domingo)."""
-        sumas = []
+        self.table.hide()
+        self.funciones_label.show()
+        
+        promedios = []
+        
+        semanas_a_considerar = self.semana_actual + 1  # Consideramos todas las semanas transcurridas
 
-        for dia in range(7):  # 7 días de la semana (Lunes a Domingo)
+        for dia in range(7):  # 7 días de la semana
             total = 0
-            for semana in range(5):  # 5 semanas
-                total += self.matriz[semana][dia]
-            sumas.append(total)
+            count = 0
+            for semana in range(semanas_a_considerar):  # Solo semanas transcurridas
+                valor = self.matriz[semana][dia]
+                total += valor
+                count += 1  # Contamos todos los valores, incluidos los ceros
+                print(f"Semana {semana}, Día {dia}, Valor: {valor}, Total: {total}, Count: {count}")
 
-        # Mostrar los totales de cada día en el label
-        suma_texto = "Suma Diaria (Total personas por día):\n"
+            promedio = total / count if count > 0 else 0  # Promedio incluye ceros
+            promedios.append(promedio)
+
+        # Mostrar los promedios de cada día en el label
+        promedio_texto = "Promedio Diario:\n"
         dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
-        for i, suma in enumerate(sumas):
-            suma_texto += f"{dias[i]}: {suma} personas\n"
+        for i, promedio in enumerate(promedios):
+            promedio_texto += f"{dias[i]}: {promedio:.2f}\n"
 
-        self.funciones_label.setText(suma_texto)
+        self.funciones_label.setText(promedio_texto)
         self.funciones_layout.addWidget(self.funciones_label)
+        
+    def descargar_json(self):
+        """Exporta los valores de la matriz a un archivo JSON, solo incluyendo las semanas con datos."""
+        
+        calendario = []
+        
+        # Iteramos sobre las semanas y guardamos solo las que tienen datos (donde al menos uno de los días es distinto de cero)
+        for semana_idx, semana in enumerate(self.matriz):
+            # Si la semana tiene al menos un valor distinto de 0
+            if any(valor != 0 for valor in semana):
+                semana_dict = {
+                    "semana": semana_idx + 1,  # Semana (empezamos desde 1)
+                    "lunes": semana[0],
+                    "martes": semana[1],
+                    "miercoles": semana[2],
+                    "jueves": semana[3],
+                    "viernes": semana[4],
+                    "sabado": semana[5],
+                    "domingo": semana[6],
+                }
+                calendario.append(semana_dict)
+        
+        # Crear un diccionario con los datos
+        datos = {
+            "calendario": calendario,
+        }
+
+        # Abrir un diálogo para guardar el archivo
+        ruta_archivo, _ = QFileDialog.getSaveFileName(self, "Guardar Matriz como JSON", "", "Archivos JSON (*.json)")
+
+        if ruta_archivo:
+            try:
+                # Guardar el archivo como JSON
+                with open(ruta_archivo, 'w') as archivo_json:
+                    json.dump(datos, archivo_json, indent=4)  # El indent asegura que el JSON sea legible
+                print(f"Matriz exportada exitosamente a: {ruta_archivo}")
+            except Exception as e:
+                print(f"Error al exportar la matriz: {e}")
 
     def volver_a_principal(self):
         self.hide()
