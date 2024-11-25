@@ -280,5 +280,5 @@ class EstadisticasWindow(QWidget):
     def volver_a_principal(self):
         from window1 import MainWindow  # Importar aquí para evitar la importación circular
         self.ventana_principal = MainWindow()  # Crear la ventana principal
-        self.ventana_principal.show()  # Mostrar la ventana principal
+        self.ventana_principal.showMaximized()  # Mostrar la ventana principal
         self.close()  # Cerrar la ventana secundaria
