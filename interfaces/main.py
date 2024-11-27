@@ -6,6 +6,7 @@ import math
 import datetime
 import json
 from ui_Proyecto_final import Ui_MainWindow
+from PySide2.QtGui import QPixmap
 
 class FuncionesWindow(QWidget):
     def __init__(self, arduino, main_window):
@@ -15,6 +16,7 @@ class FuncionesWindow(QWidget):
         self.main_window = main_window
         self.sistema_encendido = False
         self.toggle = True
+        self.setStyleSheet("FuncionesWindow {background-color: rgb(110, 194, 234);}")
 
         # Configurar el diseño principal
         main_layout = QVBoxLayout()
@@ -23,16 +25,44 @@ class FuncionesWindow(QWidget):
 
         # Espaciador superior para empujar elementos hacia abajo
         main_layout.addItem(QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding))
+        self.label_imagen = QLabel()
+        pixmap = QPixmap("marquitos.jpg")  # Cambia esto por la ruta de tu imagen
+        self.label_imagen.setPixmap(pixmap)
+        self.label_imagen.setAlignment(Qt.AlignCenter)  # Centra la imagen
+        main_layout.addWidget(self.label_imagen)
 
+
+        
+        self.label_imagen = QLabel()
+        pixmap = QPixmap("msfarma.jpeg")  # Cambia esto por la ruta de tu imagen
+        self.label_imagen.setPixmap(pixmap)
+        self.label_imagen.setAlignment(Qt.AlignCenter)  # Centra la imagen
+        main_layout.addWidget(self.label_imagen)
+
+        main_layout.addItem(QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding))
+        
+
+        main_layout.addItem(QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding))
         # Slider para regular brillo
         self.horizontalSlider = QSlider(Qt.Horizontal)
-        self.horizontalSlider.setRange(0, 255)
-        self.horizontalSlider.setValue(255)
-        self.horizontalSlider.setTickInterval(1)
-        self.horizontalSlider.setTickPosition(QSlider.TicksBelow)
-        self.horizontalSlider.valueChanged.connect(self.regular_brillo)
-        main_layout.addWidget(self.horizontalSlider)
-
+        combo_layout = QHBoxLayout()
+        self.comboBox1 = QComboBox()
+        self.comboBox2 = QComboBox()
+        
+        self.comboBox1.setFixedHeight(40)  # Alto fijo
+        self.comboBox2.setFixedHeight(40)  # Alto fijo
+        
+        niveles1 = ["Buzzer apagado", "Buzzer bajo", "Buzzer medio", "Buzzer alto"]
+        niveles2 = ["Led apagado", "Led bajo", "Led medio", "led Alto"]
+        self.comboBox1.addItems(niveles1)
+        self.comboBox2.addItems(niveles2)
+        combo_layout.addWidget(self.comboBox1)
+        combo_layout.addWidget(self.comboBox2)
+        main_layout.addLayout(combo_layout)
+        
+        self.comboBox1.currentIndexChanged.connect(lambda: self.enviar_señal_combobox(self.comboBox1, 1))
+        self.comboBox2.currentIndexChanged.connect(lambda: self.enviar_señal_combobox(self.comboBox2, 2))
+        
         # Diseño horizontal para botones de encendido y apagado
         power_buttons_layout = QHBoxLayout()
         self.pushButton_4 = self.crear_boton('Encender Sistema', self.enviar_senal_b)
@@ -44,16 +74,59 @@ class FuncionesWindow(QWidget):
         # Botón para volver al menú principal
         self.boton_volver = self.crear_boton('Volver a Principal', self.volver_a_principal)
         main_layout.addWidget(self.boton_volver)
+        
 
         self.setLayout(main_layout)
+   
+    def enviar_señal_combobox(self, combobox, combobox_id):
+        """Envía la señal seleccionada en el combobox al Arduino."""
+        if self.arduino:
+            try:
+                valor = combobox.currentText()
+                print(f"Valor seleccionado: {valor}")
+                if valor == 'Buzzer apagado':
+                    self.arduino.write(b'C')  # Comando para apagar el buzzer
+                elif valor == 'Buzzer bajo':
+                    self.arduino.write(b'D')  # Comando para buzzer en nivel bajo
+                elif valor == 'Buzzer medio':
+                    self.arduino.write(b'E')  # Comando para buzzer en nivel medio
+                elif valor == 'Buzzer alto':
+                    self.arduino.write(b'F')  # Comando para buzzer en nivel alto
+                elif valor == 'LED apagado':
+                    self.arduino.write(b'G')  # Comando para apagar LEDs
+                elif valor == 'LED bajo':
+                    self.arduino.write(b'H')  # Comando para LEDs en nivel bajo
+                elif valor == 'LED medio':
+                    self.arduino.write(b'I')  # Comando para LEDs en nivel medio
+                elif valor == 'LED alto':
+                    self.arduino.write(b'J')  # Comando para LEDs en nivel alto
+            except Exception as e:
+                print(f"Error al enviar al Arduino: {e}")
+        else:
+            print("Error: Arduino no está conectado.")
 
-    def crear_boton(self, texto, callback):
-        """Crea un botón estándar."""
-        boton = QPushButton(texto)
-        boton.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        boton.setFixedHeight(50)
-        boton.clicked.connect(callback)
-        return boton
+    def crear_boton(self, texto, callback, height=40):
+            """Crea un botón estándar."""
+            boton = QPushButton(texto)
+            boton.setFixedHeight(height)
+            boton.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            boton.setStyleSheet("""
+                QPushButton {
+                    background-color: rgb(66, 181, 210);  /* Fondo del botón: rojo tomate */
+                    color: black;  /* Color del texto: blanco */
+                    border: 2px solid rgb(70, 170, 200);  /* Borde del botón: rojo anaranjado */
+                    border-radius: 15px;  /* Bordes redondeados */
+                    padding: 10px;
+                }
+                QPushButton:hover {
+                    background-color: rgb(70, 170, 200);  /* Fondo del botón al pasar el mouse: rojo anaranjado */
+                }
+                QPushButton:pressed {
+                    background-color: rgb(50, 190, 190);  /* Fondo del botón al hacer clic: rojo indio */
+                }
+            """)
+            boton.clicked.connect(callback)
+            return boton
 
     def leer_datos_arduino(self):
         """Lee datos del Arduino."""
@@ -89,6 +162,7 @@ class EstadisticasWindow(QWidget):
         self.arduino = arduino
         self.main_window = main_window
         self.contador_actual = 0
+        self.setStyleSheet("EstadisticasWindow {background-color: rgb(110, 194, 234);}")
                 
         # Inicializar la matriz
         self.matriz = [[0] * 7 for _ in range(5)]
@@ -160,12 +234,27 @@ class EstadisticasWindow(QWidget):
         self.table.setHorizontalHeaderLabels(['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'])
 
     def crear_boton(self, texto, callback, height=40):
-        """Crea un botón estándar."""
-        boton = QPushButton(texto)
-        boton.setFixedHeight(height)
-        boton.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        boton.clicked.connect(callback)
-        return boton
+            """Crea un botón estándar."""
+            boton = QPushButton(texto)
+            boton.setFixedHeight(height)
+            boton.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            boton.setStyleSheet("""
+                QPushButton {
+                    background-color: rgb(66, 181, 210);  /* Fondo del botón: rojo tomate */
+                    color: black;  /* Color del texto: blanco */
+                    border: 2px solid rgb(70, 170, 200);  /* Borde del botón: rojo anaranjado */
+                    border-radius: 15px;  /* Bordes redondeados */
+                    padding: 10px;
+                }
+                QPushButton:hover {
+                    background-color: rgb(70, 170, 200);  /* Fondo del botón al pasar el mouse: rojo anaranjado */
+                }
+                QPushButton:pressed {
+                    background-color: rgb(50, 190, 190);  /* Fondo del botón al hacer clic: rojo indio */
+                }
+            """)
+            boton.clicked.connect(callback)
+            return boton
 
     def mostrar_contador(self):
         """Muestra el último dato leído del Arduino en el layout."""
@@ -365,6 +454,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Proyecto Final")
         self.arduino = self.configurar_arduino()
         self.ui = Ui_MainWindow
+        self.setStyleSheet("MainWindow {background-color: rgb(110, 194, 234);}")
 
         # Ventanas secundarias
         self.funciones_window = FuncionesWindow(self.arduino, self)
@@ -390,7 +480,15 @@ class MainWindow(QMainWindow):
         for texto, callback in botones:
             boton = self.crear_boton(texto, callback, height=75)
             layout_botones.addWidget(boton)
+        
+        self.label_imagen = QLabel()
+        pixmap = QPixmap("msfarma.jpeg")  # Cambia esto por la ruta de tu imagen
+        self.label_imagen.setPixmap(pixmap)
+        self.label_imagen.setAlignment(Qt.AlignCenter)  # Centra la imagen
+        layout_principal.addWidget(self.label_imagen)
 
+        layout_principal.addItem(QSpacerItem(20, 40, QSizePolicy.Minimum, QSizePolicy.Expanding))
+        
         layout_principal.addLayout(layout_botones)
 
         # Configurar como widget central
@@ -409,12 +507,27 @@ class MainWindow(QMainWindow):
             return None
 
     def crear_boton(self, texto, callback, height=40):
-        """Crea un botón estándar."""
-        boton = QPushButton(texto)
-        boton.setFixedHeight(height)
-        boton.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        boton.clicked.connect(callback)
-        return boton
+            """Crea un botón estándar."""
+            boton = QPushButton(texto)
+            boton.setFixedHeight(height)
+            boton.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            boton.setStyleSheet("""
+                QPushButton {
+                    background-color: rgb(66, 181, 210);  /* Fondo del botón: rojo tomate */
+                    color: black;  /* Color del texto: blanco */
+                    border: 2px solid rgb(70, 170, 200);  /* Borde del botón: rojo anaranjado */
+                    border-radius: 15px;  /* Bordes redondeados */
+                    padding: 10px;
+                }
+                QPushButton:hover {
+                    background-color: rgb(70, 170, 200);  /* Fondo del botón al pasar el mouse: rojo anaranjado */
+                }
+                QPushButton:pressed {
+                    background-color: rgb(50, 190, 190);  /* Fondo del botón al hacer clic: rojo indio */
+                }
+            """)
+            boton.clicked.connect(callback)
+            return boton
 
     def mostrar_funciones(self):
         """Abre la ventana de Funciones."""
@@ -425,6 +538,8 @@ class MainWindow(QMainWindow):
         """Abre la ventana de Estadísticas."""
         self.estadisticas_window.showMaximized()
         self.hide()
+    
+
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

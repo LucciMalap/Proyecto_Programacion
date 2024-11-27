@@ -1,13 +1,12 @@
 #define LEDBLANCO1 10
 #define LEDBLANCO2 11
 #define LEDBLANCO3 12
-#define TRIGGER 5
-#define ECHO 6
-#define BUZZER 9
+#define TRIGGER 4
+#define ECHO 5
+#define BUZZER 6
 int Inputs = 0;
 int contador = 0;
-int brillo = 255;
-int brillo_constante = 255;
+int tono = 2000;
 bool sistemaEncendido = true;
 
 const float sonido = 34300.0;
@@ -28,12 +27,6 @@ void setup() {
 void loop() {
   if (Serial.available() > 0) {
     Inputs = Serial.read();
-    brillo = Serial.parseInt();
-    delay(10); //evita problemas con entradas 
-    if (brillo > 0){
-      brillo_constante = brillo;
-      Serial.println(brillo);
-    }
   }
 
   switch (Inputs) {
@@ -43,6 +36,18 @@ void loop() {
       break;
     case 'B':
       sistemaEncendido = true;
+      break;    
+    case 'C': 
+      tono = 0;
+      break;
+    case 'D': 
+      tono = 500;
+      break;
+    case 'E':
+      tono = 1500;
+      break;
+    case 'F':
+      tono = 2000;
       break;
   }
 
@@ -52,7 +57,8 @@ void loop() {
 
     if (distancia < 10) { 
       encenderAlertas();
-      sumarContador();
+      Serial.write('S');  // Enviar señal al detectar proximidad
+      Serial.println();
     } 
     else {
       apagarAlertas();
@@ -70,7 +76,7 @@ void encenderAlertas() {
   digitalWrite(LEDBLANCO1, HIGH);
   digitalWrite(LEDBLANCO2, HIGH);
   digitalWrite(LEDBLANCO3, HIGH);
-  tone(BUZZER, 1000);
+  tone(BUZZER, tono);
   delay(2000);
 }
 
@@ -78,13 +84,6 @@ void apagarLEDs() {
   digitalWrite(LEDBLANCO1, LOW);
   digitalWrite(LEDBLANCO2, LOW);
   digitalWrite(LEDBLANCO3, LOW);
-}
-
-void sumarContador() {
-  contador++;
-  Serial.print(contador);
-  Serial.println();
-  delay(1000);
 }
 
 float calcularDistancia() {
